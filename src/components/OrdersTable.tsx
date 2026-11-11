@@ -20,7 +20,7 @@ const columns: { key: SortKey; label: string }[] = [
   { key: "date", label: "Date" },
 ];
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 
 export default function OrdersTable() {
   const [search, setSearch] = useState("");
@@ -33,7 +33,8 @@ export default function OrdersTable() {
   const [draftTo, setDraftTo] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const [page, setPage] = useState(1); // number of batches loaded
 
   // Dates are ISO strings (YYYY-MM-DD), so string comparison is correct.
   const filtered = orders.filter(
@@ -55,12 +56,9 @@ export default function OrdersTable() {
     return sortDir === "asc" ? result : -result;
   });
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRows = sorted.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  const visibleCount = page * pageSize;
+  const pageRows = sorted.slice(0, visibleCount);
+  const remaining = sorted.length - pageRows.length;
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -340,39 +338,62 @@ export default function OrdersTable() {
             </table>
           </div>
 
-          <nav
-            aria-label="Orders pagination"
+          <div
             style={{
               display: "flex",
-              gap: "12px",
+              justifyContent: "space-between",
               alignItems: "center",
-              justifyContent: "flex-end",
+              flexWrap: "wrap",
+              gap: "12px",
               marginTop: "16px",
             }}
           >
-            <button
-              type="button"
-              onClick={() => setPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              style={pageButton(currentPage === 1)}
+            <label
+              style={{
+                fontSize: "14px",
+                color: "#374151",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
             >
-              Previous
-            </button>
+              Rows per page:
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                style={input}
+              >
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
             <span
               aria-live="polite"
-              style={{ fontSize: "14px", color: "#374151" }}
+              style={{ fontSize: "14px", color: "#6b7280" }}
             >
-              Page {currentPage} of {totalPages} ({sorted.length} orders)
+              Showing {pageRows.length} of {sorted.length} orders
             </span>
-            <button
-              type="button"
-              onClick={() => setPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              style={pageButton(currentPage === totalPages)}
-            >
-              Next
-            </button>
-          </nav>
+            {remaining > 0 && (
+              <button
+                type="button"
+                onClick={() => setPage(page + 1)}
+                style={{
+                  ...pageButton(false),
+                  backgroundColor: "#166534",
+                  color: "white",
+                  borderColor: "#166534",
+                }}
+              >
+                Load {pageSize} more
+              </button>
+            )}
+          </div>
         </>
       )}
     </section>
